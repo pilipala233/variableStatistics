@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+</head>
+
+<body>
+
+</body>
+<script>
+    //AST解析体
+    let body = ''
+    //页面变量关系对象
+    var yoo = Object.create(null);
+    
+  
+    //页面变量关系数组
+    let useArr = [];
+    //有用变量
+    let useFulVariables=[];
+    //无用的变量
+    let unUseFulVariables = [];
+
+    const root = Symbol('yoo')
+    //去重(顺序一致？)
+    //处理window作用域
+    class TreeNode {
+        constructor(value,PNode,type) {
+            this.value = value
+            this.used = true
+            this.isRead = false
+            this.childrens = []
+            this.parentNode = PNode
+            this.domain = []
+            this.type = type
+
+        }
+
+    }
+    const Tree=new TreeNode(root,null,'')
+
+
+
+
+
+    fetch('./test.json')
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (myJson) {
+            body = myJson;
+            BFS(body, Tree,false)
+
+
+            
+        }).then(()=>{
+
+            console.log(Tree);
+
+        }).then(()=>{
+
+            DFS(Tree,[]);
+            DFS2(Tree)
+            DFS3(Tree)
+        }).then(()=>{
+
+            console.log(Tree);
+
+        });
+
+
+        
+
+
+    //AST 树的辅助解析函数
+    function helper(node) {
+
+        //代码块
+        if (node.type == "BlockStatement") {
+            //直接继续走递归
+            return {
+                    type:node.type,
+                    value:node.body
+                }
+        }
+
+
+
+        //function 声明
+        if (node.type == 'FunctionDeclaration') {
+
+            return {
+                type:node.type,
+                value:[node.id, node.body]
+            }
+
+
+        }
+
+
+        //声明变量
+
+        if (node.type == "VariableDeclaration") {
+            return {
+                type:node.type,
+                value:node.declarations
+            }
+            let tmparr = [];
+
+
+            for (let i = 0; i < node.declarations.length; i++) {
+                tmparr.push(node.declarations[i]);
+            }
+            return{
+                type:node.type,
+                value:tmparr
+            };
+
+
+        }
+
+        //具体的变量声明
+        if (node.type == "VariableDeclarator") {
+
+            return {
+                type:node.type,
+                value:[node.id, node.init]
+
+            }
+
+
+
+        }
+
+        //函数赋值
+        if (node.type == "FunctionExpression") {
+            return {
+                type:node.type,
+                value:node.body
+                
+            }
+        }
+
+        //箭头函数(待)
+        if (node.type == "ArrowFunctionExpression") {
+
+            return {
+                type:node.type,
+                value:node.params
+            }
+            let tmparr = [];
+            for (let i = 0; i < node.params.length; i++) {
+                tmparr.push(node.params[i]);
+
+            }
+            //tmparr.push(node.body);
+            return tmparr;
+            //缺运算判断
+
+
+        }
+
+        //赋值
+        if (node.type == "Identifier") {
+
+
+            return {
+                type:node.type,
+                value:node.name
+
+            }
+
+
+
+        }
+
+
+
+
+        //表达式
+        if (node.type == "ExpressionStatement") {
+            return {
+                type:node.type,
+                value:node.expression 
+            }
+        }
+
+        //赋值操作
+        if (node.type == 'AssignmentExpression') {
+
+            return {
+                type:node.type,
+                value:[node.left, node.right]
+            }
+
+        }
+        //对象的操作
+        if (node.type == 'MemberExpression') {
+
+            return {
+                type:node.type,
+                value:node.object            
+
+            }
+            //(待cap1,console等)
+        }
+
+        //函数调用
+        if (node.type == 'CallExpression') {
+            return {
+                type:node.type,
+                value:node.callee           
+
+            }
+        }
+
+        if (node.type == 'Literal') {
+            return {
+                type:node.type,
+                value:[]          
+
+            }
+        }
+
+        //补充
+        if(node.type=='NewExpression'){
+            return {
+                type:node.type,
+                value:node.callee
+            }
+        }
+        if(node.type=='ArrayExpression'){
+            return {
+                type:node.type,
+                value:node.elements
+            }
+        }
+        if(node.type=='IfStatement'){
+
+            return {
+                type:node.type,
+                value:[]
+            }
+            //待定
+        }
+        
+        if(node.type=='ObjectExpression'){
+            return {
+                type:node.type,
+                value:node.properties
+
+            }
+        }
+
+        if(node.type=='ForStatement'){
+            return {
+                type:node.type,
+                value:[]
+            }
+        
+        }
+        
+        if(node.type=='EmptyStatement'){
+            return {
+                type:node.type,
+                value:[]
+            }
+        
+        }    
+
+        if(node.type=='ReturnStatement'){
+            return {
+                type:node.type,
+                value:node.argument
+            }
+            
+        
+        }  
+        if(node.type=='ConditionalExpression'){
+            return {
+                type:node.type,
+                value:[]
+            }
+        
+        }  
+        
+        if(node.type=='BinaryExpression'){
+            return {
+                type:node.type,
+                value:[node.left,node.right]
+            }
+            
+        
+        }  
+        if(node.type=='LogicalExpression'){
+
+            return {
+                type:node.type,
+                value:[]
+            }
+        }   
+
+        if(node.type=='Property'){
+            return {
+                type:node.type,
+                value:node.key
+            }
+            
+        }
+    }
+
+    //寻找树中的父元素
+    function findP(nodeArr) {
+        let tmparr = [];
+        for (let i = 0; i < nodeArr.length; i++) {
+            
+            
+            let res = helper(nodeArr[i]);
+            
+
+            if (Object.prototype.toString.call(res.value) == '[object Object]') {
+                tmparr.push(res.value)
+
+            } else if (Object.prototype.toString.call(res.value) == '[object Array]') {
+                tmparr = tmparr.concat(res.value)
+
+
+            } else {
+                nodeArr.splice(i, 1)
+                return {
+                    Pname: res.value,
+                    type:res.type,
+                    otherNodes: nodeArr.splice(i, 1)
+                }
+            }
+
+            if (i + 1 == nodeArr.length) {
+                return findP(tmparr)
+            }
+
+        }
+    }
+
+
+    //判断是否使用过(同层一次)
+    function judgeUse(arr,target){
+        for (let i = 0; i < arr.length; i++) {
+            if(arr[i].value ==target.value){
+                arr[i].used=false
+                target.isRead = true
+
+            }
+            
+            
+        }
+
+    }
+    //层次遍历
+
+    function BFS(nodeArr, ParentTree, isfind = false ) {
+
+
+        let tmparr = [];
+        for (let i = 0; i < nodeArr.length; i++) {
+            
+            let res = helper(nodeArr[i]);
+            //console.log(res.type)
+
+
+            if (Object.prototype.toString.call(res.value) == '[object Object]') {
+                tmparr.push(res.value)
+
+            } else if (Object.prototype.toString.call(res.value) == '[object Array]' && !isfind) {
+
+
+
+                let tmpobj = findP(res.value)
+                if (tmpobj) {
+                    //结果
+                    console.log('1'+tmpobj.type)
+                    let res = new TreeNode(tmpobj.Pname,ParentTree,tmpobj.type)
+                    //判断是否存在
+                    judgeUse(ParentTree.childrens,res)
+                    ParentTree.childrens.push(res);
+
+                    
+                    isfind = !isfind
+
+                    BFS(tmpobj.otherNodes, res, isfind)
+                    
+                    isfind = !isfind
+
+
+
+                } 
+
+
+            } else if (Object.prototype.toString.call(res.value) == '[object Array]' && isfind) {
+                isfind = !isfind
+                tmparr = tmparr.concat(res.value)
+
+            } else { 
+                //结果
+                console.log(res.type)
+                let  tmpnode= new TreeNode(res.value,ParentTree,res.type)
+                judgeUse(ParentTree.childrens,tmpnode)
+                ParentTree.childrens.push(tmpnode);
+
+
+
+            }
+
+            if (i + 1 == nodeArr.length) {
+
+                BFS(tmparr,ParentTree, isfind)
+            
+            }
+
+        }
+
+
+
+    }
+
+
+    //进行范围整理（第二次,处理同名变量覆盖造成的垃圾变量）
+    function DFS(node,arr){
+
+        node.domain = arr
+
+
+        let childrens = []
+        for (let i = 0; i < node.childrens.length; i++) {
+            //搭线，再加上数组的值，形成一个图
+            childrens.push(node.childrens[i])
+
+        }
+        childrens=childrens.concat(arr)
+
+
+
+
+       for (let i = 0; i < node.childrens.length; i++) {
+            //当父节点是垃圾节点的时候，其全部子节点都是垃圾节点
+            
+            if(!node.used){
+                //没用的节点
+                node.childrens[i].used =false 
+                DFS(node.childrens[i],arr)
+
+            }else{
+                let temp = childrens.concat([])
+                temp.splice(i,1)
+                DFS(node.childrens[i],temp)
+            }
+            
+                
+        }
+
+
+    }
+
+        
+    //第三次范围整理（节点前后整理，先到最低层，然后读图）
+
+    function DFS2(node){
+        //到树底部
+        
+       
+        if(node.childrens.length ==0){
+            
+            helper2(node.domain,node);
+        }
+
+
+        for (let i = 0; i < node.childrens.length; i++) {
+
+            if(node.childrens[i].used){
+                DFS2(node.childrens[i])
+            }
+            
+            
+        }
+
+
+
+
+    }
+    
+    //节点对比函数
+    function helper2(nodeArr,targetNode){
+
+        for (let i = 0; i < nodeArr.length; i++) {
+            //上层有引用
+            if(nodeArr[i].used&&nodeArr[i].value ==targetNode.value){
+                
+                //前后顺序是否先出现，是的话就直接停止解析
+                nodeArr[i].used = true
+                nodeArr[i].isRead = true
+                targetNode.isRead = true
+                targetNode.used = true
+                
+            }else if(targetNode.isRead&&targetNode.used){
+                //同层引用(之前已经处理过得)
+                targetNode.isRead = true
+                targetNode.used = true
+
+            }else{
+                targetNode.isRead = true
+                targetNode.used = false
+            }
+
+            //同层引用
+
+            ////////最底层的变量
+            //targetNode.isRead = true
+            //targetNode.used = 'false'
+
+            
+        }
+    }
+
+    //第四次整理
+    
+    function DFS3(node){
+
+
+        for (let i = 0; i < node.childrens.length; i++) {
+
+            if(node.childrens[i].used&&!node.childrens[i].isRead){
+                node.childrens[i].used = false
+                DFS2(node.childrens[i])
+            }
+            
+            
+        }
+
+    }
+
+
+
+    
+
+
+
+
+    
+
+
+
+
+
+    
+
+
+</script>
+
+</html>
