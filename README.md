@@ -1,4 +1,4 @@
-# variableStatistics
+# variableStatistics[停止研究]
 用于实现单JS文件编译到浏览器后的变量统计
 
 目前仍在完善，不定时更新，主要是为了统计文件中的js变量以为后面进行实现简单的树摇功能
